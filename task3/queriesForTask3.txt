@@ -1,0 +1,109 @@
+--------------------------------------------------------------------------------------------------------------------
+QUIRY1:  
+
+SELECT  year_months.mm, 
+        COUNT(ind_res.id) AS individual_lessons,
+		COUNT(group_res.id) AS group_lessons,
+		COUNT(ens_re.id) AS ensembles_lessons, 
+		(COUNT(ind_res.id)+
+		COUNT(group_res.id)+
+		COUNT(ens_re.id)) AS total_lessons	
+		
+              
+                        
+FROM    (SELECT  TO_CHAR((CURRENT_DATE - interval '1 month' * a),'MM') AS mm FROM generate_series(1,12,1) AS s(a)) as year_months
+        LEFT JOIN
+        (SELECT        *
+        FROM        individual_lesson) as ind_res 
+        ON             extract(year from ind_res.start_date) = 2022 AND 
+                    extract(month from ind_res.start_date) = year_months.mm::INTEGER
+		LEFT JOIN 
+		(SELECT *
+		 FROM    group_lesson) as group_res
+       	 ON    	extract(year from group_res.start_date) = 2022 AND
+                extract(month from group_res.start_date) = year_months.mm::INTEGER
+				
+		LEFT JOIN 
+		(SELECT *
+		FROM ensemble) as ens_re
+		ON 	extract(year from ens_re.start_date) = 2022 AND
+			extract(month from ens_re.start_date) = year_months.mm::INTEGER
+        
+GROUP BY     year_months.mm
+ORDER BY     year_months.mm
+
+
+
+--------------------------------------------------------------------------------------------------------------------------
+QEURY2:
+
+SELECT   year_months.mm AS month, 
+        ROUND((COUNT(ind_res.id)::DECIMAL + COUNT(group_res.id)::DECIMAL+ COUNT(ens_re.id))::DECIMAL/3, 2) AS total_lessons
+              
+                        
+FROM    (SELECT  TO_CHAR((CURRENT_DATE - interval '1 month' * a),'MM') AS mm FROM generate_series(1,12,1) AS s(a)) as year_months
+        LEFT JOIN
+        (SELECT        *
+        FROM        individual_lesson) as ind_res 
+        ON             extract(year from ind_res.start_date) = 2022 AND 
+                    extract(month from ind_res.start_date) = year_months.mm::INTEGER
+		LEFT JOIN 
+		(SELECT *
+		 FROM    group_lesson) as group_res
+       	 ON    	extract(year from group_res.start_date) = 2022 AND
+                extract(month from group_res.start_date) = year_months.mm::INTEGER
+				
+		LEFT JOIN 
+		(SELECT *
+		FROM ensemble) as ens_re
+		ON 	extract(year from ens_re.start_date) = 2022 AND
+			extract(month from ens_re.start_date) = year_months.mm::INTEGER
+        
+GROUP BY     year_months.mm
+ORDER BY     year_months.mm
+------------------------------------------------------------------------------------------------------------------------
+QUIRY 3:
+
+
+
+
+SELECT 	instructor.first_name,	(count(gr_res.id) + 
+									count(ind_res.id) +
+									count(ens_res.id)) AS instructor_tot_lessons
+FROM 	instructor
+		LEFT JOIN
+        (SELECT        *
+        FROM        group_lesson) as gr_res 
+		ON 	extract(month from gr_res.start_date) = extract(month from CURRENT_DATE) AND
+			extract(year from gr_res.start_date) = extract(year from CURRENT_DATE) AND
+			gr_res.instructor_id = instructor.id
+		LEFT JOIN 
+		(SELECT        *
+        FROM        individual_lesson) as ind_res
+		ON 	extract(month from ind_res.start_date) = extract(month from CURRENT_DATE) AND
+			extract(year from ind_res.start_date) = extract(year from CURRENT_DATE) AND
+			ind_res.instructor_id = instructor.id
+		LEFT JOIN 
+		(SELECT        *
+        FROM        ensemble) as ens_res
+		ON 	extract(month from ens_res.start_date) = extract(month from CURRENT_DATE) AND
+			extract(year from ens_res.start_date) = extract(year from CURRENT_DATE) AND
+			ens_res.instructor_id = instructor.id
+	
+	
+GROUP BY instructor.id
+HAVING 	(count(gr_res.id) + 
+		count(ind_res.id) +
+		count(ens_res.id)) > 0
+ORDER BY instructor_tot_lessons DESC
+
+---------------------------------------------------------------------------------------------------
+
+SELECT ensemble.id, ensemble.start_date, ensemble.genre, 
+	CASE 
+		WHEN ensemble.number_of_student = 30 then 'the ensemble is full booked'
+		WHEN ensemble.number_of_student > 27 AND ensemble.number_of_student < 30 then 'this ensemble has 1-2 sets left'
+		ELSE 'this ensemble has many sets left'
+		END AS test
+FROM ensemble
+Order by ensemble.start_date, ensemble.genre
